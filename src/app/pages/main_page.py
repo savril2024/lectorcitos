@@ -823,14 +823,51 @@ st.session_state.bienvenida_reproducida = True
 st.markdown("<h2 class='section-title'>📚 Palabra del Día</h2>", unsafe_allow_html=True)
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
+
+    img_url = image_api.obtener_imagen(
+    st.session_state.palabra_actual,
+    st.session_state.idioma
+)
+if img_url:
     st.markdown(f"""
+    <div style='text-align:center; margin-bottom:1rem;'>
+        <img src='{img_url}'
+             style='max-height:200px; border-radius:20px;
+                    box-shadow:0 8px 20px rgba(0,0,0,0.2);
+                    object-fit:cover; width:100%;'
+             alt='{st.session_state.palabra_actual}'/>
+    </div>""", unsafe_allow_html=True)
+
+img_url = image_api.obtener_imagen(
+    st.session_state.palabra_actual,
+    st.session_state.idioma
+)
+if img_url:
+    st.markdown(f"""
+    <div style='text-align:center; margin-bottom:1rem;'>
+        <img src='{img_url}'
+             style='max-height:200px; border-radius:20px;
+                    box-shadow:0 8px 20px rgba(0,0,0,0.2);
+                    object-fit:cover; width:100%;'
+             alt='{st.session_state.palabra_actual}'/>
+    </div>""", unsafe_allow_html=True)
+
+st.markdown(f"""
     <div class='palabra-card'>
         <h2>{'Palabra' if st.session_state.idioma=='es' else 'Word'}</h2>
         <h1>{st.session_state.palabra_actual}</h1>
     </div>""", unsafe_allow_html=True)
-    if st.button("🔊 Escuchar palabra", use_container_width=True, type="secondary"):
-        reproducir_palabra()
 
+
+
+
+    col_audio1, col_audio2 = st.columns(2)
+    with col_audio1:
+        if st.button("🔊 Español", use_container_width=True, type="secondary"):
+            reproducir_audio_html(st.session_state.palabra_actual, "es")
+    with col_audio2:
+        if st.button("🔊 English", use_container_width=True, type="secondary"):
+            reproducir_audio_html(st.session_state.palabra_actual, "en")
 
 # ── ¿Qué son las sílabas? ────────────────────────────────────────
 _texto_silabas_es = (

@@ -1,0 +1,188 @@
+# compose.yaml
+# Correcciones aplicadas:
+#   - cloudflare_tunnel: healthcheck pgrep -x cloudflared (mas preciso)
+#   - cloudflare_tunnel: start_period aumentado a 30s, retries a 5
+#   - app_lectorcitos: start_period aumentado a 60s para dar tiempo a Streamlit
+#   - app_lectorcitos: audio_cache volume agregado para persistencia
+
+services:
+  # ========================================
+  # BASE DE DATOS COMPARTIDA (PostgreSQL)
+  # ========================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_shared
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - apps_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-admin}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================
+  # APP CONJUNTOS (Puerto 8000)
+  # ========================================
+  app_conjuntos:
+    build:
+      context: ./app_conjuntos
+      dockerfile: Dockerfile
+    container_name: app_conjuntos
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app_conjuntos/data:/app/data
+    networks:
+      - apps_network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ========================================
+  # APP BILINGUE (Puerto 4444)
+  # ========================================
+  app_bilingue:
+    build:
+      context: ./libro-bilingue-kids
+      dockerfile: Dockerfile
+    container_name: app_bilingue
+    restart: always
+    working_dir: /app
+    ports:
+      - "4444:4444"
+    environment:
+      - ENCRYPTION_KEY=MisAmigosdeJuventud2025
+      - DOMAIN=micaballoavril.site
+      - PORT=4444
+      - HOST=0.0.0.0
+      - DATABASE_URL=postgresql://${DB_USER:-admin}:${DB_PASSWORD:-admin123}@postgres:5432/miappdb
+    volumes:
+      - ./libro-bilingue-kids:/app
+    networks:
+      - apps_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - bash
+      - -c
+      - python decrypt_env.py && sleep 15 && python -c 'from app.init_db import init_database; init_database()' && exec gunicorn -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:4444 --workers 1 --timeout 120 --graceful-timeout 30
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:4444/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ========================================
+  # APP LECTORCITOS (Puerto 3000)
+  # FIX: start_period 60s — Streamlit tarda en arrancar
+  # FIX: audio_cache volume para persistir mp3 entre reinicios
+  # ========================================
+  app_lectorcitos:
+    build:
+      context: ./app_lectorcitos
+      dockerfile: Dockerfile
+    container_name: app_lectorcitos
+    restart: always
+    ports:
+      - "3010:3010" # externo:interno
+    environment:
+      - DATABASE_URL=/app/db/custom.db
+    volumes:
+      - ./app_lectorcitos/db:/app/db
+      - audio_cache:/app/public/audio_cache
+    networks:
+      - apps_network
+    command: >
+      streamlit run src/app/pages/main_page.py --server.port=3010 --server.address=0.0.0.0 --server.headless=true --browser.gatherUsageStats=false
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:3010/_stcore/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ========================================
+  # APP LECTURA (Puerto 5000)
+  # ========================================
+  app_lectura:
+    build:
+      context: ./App_PrimeraLectura
+      dockerfile: Dockerfile
+    container_name: app_lectura
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - FLET_SECRET_KEY=${FLET_SECRET_KEY:-milectura2024}
+      - FLET_SERVER_PORT=5000
+      - FLET_WEB_RENDERER=html
+      - FLET_WEB_USE_COLOR_EMOJI=true
+    networks:
+      - apps_network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:5000 || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ========================================
+  # CLOUDFLARE TUNNEL (opcional — perfil "tunnel")
+  # No se inicia con "podman-compose up -d" normal.
+  # Para producción: Cloudflare Pages, GitHub Actions o:
+  #   podman-compose --profile tunnel up -d cloudflare_tunnel
+  # ========================================
+  cloudflare_tunnel:
+    profiles: [ "tunnel" ]
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare_tunnel
+    restart: always
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+      - TZ=America/Bogota
+    command: tunnel --no-autoupdate --protocol http2 run
+    depends_on:
+      - app_lectura
+      - app_bilingue
+      - app_conjuntos
+      - app_lectorcitos
+    networks:
+      - apps_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pgrep -x cloudflared || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+# ========================================
+# VOLUMENES
+# ========================================
+volumes:
+  postgres_data:
+    driver: local
+  audio_cache:
+    driver: local
+
+# ========================================
+# REDES
+# ========================================
+networks:
+  apps_network:
+    driver: bridge
+    name: apps_educativas_network
