@@ -1,0 +1,11 @@
+﻿__pycache__/
+*.pyc
+*.pyo
+.venv/
+.env
+db/
+public/audio_cache/
+*.mp3
+*.db
+.streamlit/secrets.toml
+Dockerfile
