@@ -852,15 +852,6 @@ if img_url:
              alt='{st.session_state.palabra_actual}'/>
     </div>""", unsafe_allow_html=True)
 
-st.markdown(f"""
-    <div class='palabra-card'>
-        <h2>{'Palabra' if st.session_state.idioma=='es' else 'Word'}</h2>
-        <h1>{st.session_state.palabra_actual}</h1>
-    </div>""", unsafe_allow_html=True)
-
-
-
-
     col_audio1, col_audio2 = st.columns(2)
     with col_audio1:
         if st.button("🔊 Español", use_container_width=True, type="secondary"):
