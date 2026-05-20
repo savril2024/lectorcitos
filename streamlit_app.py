@@ -6,4 +6,5 @@ sys.path.insert(0, str(root))
 sys.path.insert(0, str(root / "app"))
 sys.path.insert(0, str(root / "src"))
 
-from src.app.pages.main_page import *
+# Ejecutar main_page directamente
+exec(open(root / "src" / "app" / "pages" / "main_page.py").read())
