@@ -63,6 +63,7 @@ for _base in [_src_app_path, _app_path]:
         tts_api    = _il.import_module("api.tts_api").tts_api
         phrase_api = _il.import_module("api.phrase_api").phrase_api
         pdf_api    = _il.import_module("api.pdf_api").pdf_api
+        image_api  = _il.import_module("api.image_api").image_api
         avatar     = _il.import_module("components.avatar").avatar
         _import_ok = True
         break
