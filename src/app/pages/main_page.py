@@ -304,8 +304,25 @@ if not st.session_state.audio_preloaded:
 # ══════════════════════════════════════════════════════════════════
 # HELPERS DE AUDIO (usan la función central)
 # ══════════════════════════════════════════════════════════════════
+# Diccionario de traducción ES→EN
+_TRADUCCION = {
+    "TOMATE":"TOMATO","CASA":"HOUSE","PERRO":"DOG","GATO":"CAT",
+    "SOL":"SUN","LUNA":"MOON","MESA":"TABLE","SILLA":"CHAIR",
+    "AGUA":"WATER","FUEGO":"FIRE","PELOTA":"BALL","MOTOR":"MOTOR",
+    "CAMINO":"ROAD","JARDIN":"GARDEN","FLOR":"FLOWER","ARBOL":"TREE",
+    "LIBRO":"BOOK","LAPIZ":"PENCIL","MANZANA":"APPLE","PLATANO":"BANANA"
+}
+
+def _get_palabra_idioma(idioma: str) -> str:
+    """Retorna la palabra en el idioma correcto para el audio."""
+    palabra = st.session_state.palabra_actual
+    if idioma == 'en':
+        return _TRADUCCION.get(palabra, palabra)
+    return palabra
+
 def reproducir_palabra():
-    reproducir_audio_html(st.session_state.palabra_actual, st.session_state.idioma)
+    palabra = _get_palabra_idioma(st.session_state.idioma)
+    reproducir_audio_html(palabra, st.session_state.idioma)
     st.session_state.mensaje_avatar = avatar.get_mensaje("audio_instruccion", st.session_state.idioma)
 
 def reproducir_silaba(silaba: str):
@@ -839,28 +856,15 @@ if img_url:
              alt='{st.session_state.palabra_actual}'/>
     </div>""", unsafe_allow_html=True)
 
-img_url = image_api.obtener_imagen(
-    st.session_state.palabra_actual,
-    st.session_state.idioma
-)
-if img_url:
-    st.markdown(f"""
-    <div style='text-align:center; margin-bottom:1rem;'>
-        <img src='{img_url}'
-             style='max-height:200px; border-radius:20px;
-                    box-shadow:0 8px 20px rgba(0,0,0,0.2);
-                    object-fit:cover; width:100%;'
-             alt='{st.session_state.palabra_actual}'/>
-    </div>""", unsafe_allow_html=True)
 
     col_audio1, col_audio2 = st.columns(2)
     with col_audio1:
         if st.button("🔊 Español", use_container_width=True, type="secondary"):
-            reproducir_audio_html(st.session_state.palabra_actual, "es")
+            reproducir_audio_html(_get_palabra_idioma("es"), "es")
     with col_audio2:
         if st.button("🔊 English", use_container_width=True, type="secondary"):
-            reproducir_audio_html(st.session_state.palabra_actual, "en")
-
+            reproducir_audio_html(_get_palabra_idioma("en"), "en")
+            
 # ── ¿Qué son las sílabas? ────────────────────────────────────────
 _texto_silabas_es = (
     "Las sílabas son los sonidos que forman las palabras. "
@@ -936,8 +940,10 @@ with st.expander("✨ ¿Qué son las sílabas?" if st.session_state.idioma=='es'
         lbl = "🔊 ES+EN" if st.session_state.idioma == 'es' else "🔊 ES+EN"
         tip = "Escuchar en Español e Inglés" if st.session_state.idioma == 'es' else "Hear in Spanish & English"
         if st.button(lbl, key="btn_leer_explicacion", help=tip, use_container_width=True):
-            reproducir_audio_html(_texto_silabas_es, 'es')
-            reproducir_audio_html(_texto_silabas_en, 'en')
+            if st.session_state.idioma == 'es':
+                reproducir_audio_html(_texto_silabas_es, 'es')
+            else:
+                reproducir_audio_html(_texto_silabas_en, 'en')
 
 
 # ── Consonantes y Sílabas ────────────────────────────────────────
