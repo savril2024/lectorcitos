@@ -167,6 +167,10 @@ def reproducir_audio_html(texto: str, idioma: str):
     y que st.rerun() corte el audio antes de terminar.
     """
     import base64
+    import logging
+    logging.warning(f"🔊 TTS REQUEST: texto='{texto}' | idioma='{idioma}'")
+    
+    ruta = tts_api.generar_audio(texto.lower(), idioma)
     ruta = tts_api.generar_audio(texto.lower(), idioma)
     if not ruta:
         return
@@ -312,7 +316,16 @@ _TRADUCCION = {
     "CAMINO":"ROAD","JARDIN":"GARDEN","FLOR":"FLOWER","ARBOL":"TREE",
     "LIBRO":"BOOK","LAPIZ":"PENCIL","MANZANA":"APPLE","PLATANO":"BANANA"
 }
-
+# Opción: fallback con deep-translator si la palabra no está en el diccionario
+def _traducir_palabra(palabra: str, destino: str = 'en') -> str:
+    if palabra in _TRADUCCION:
+        return _TRADUCCION[palabra]
+    try:
+        from deep_translator import GoogleTranslator
+        return GoogleTranslator(source='es', target=destino).translate(palabra)
+    except:
+        return palabra  # fallback seguro
+        
 def _get_palabra_idioma(idioma: str) -> str:
     """Retorna la palabra en el idioma correcto para el audio."""
     palabra = st.session_state.palabra_actual
