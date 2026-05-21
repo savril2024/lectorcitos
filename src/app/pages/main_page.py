@@ -171,8 +171,9 @@ def reproducir_audio_html(texto: str, idioma: str):
     logging.warning(f"🔊 TTS REQUEST: texto='{texto}' | idioma='{idioma}'")
     
     ruta = tts_api.generar_audio(texto.lower(), idioma)
-    ruta = tts_api.generar_audio(texto.lower(), idioma)
+    
     if not ruta:
+        st.error(f"❌ No se generó audio para: {texto} ({idioma})")
         return
     try:
         with open(ruta, "rb") as f:
@@ -325,7 +326,7 @@ def _traducir_palabra(palabra: str, destino: str = 'en') -> str:
         return GoogleTranslator(source='es', target=destino).translate(palabra)
     except:
         return palabra  # fallback seguro
-        
+
 def _get_palabra_idioma(idioma: str) -> str:
     """Retorna la palabra en el idioma correcto para el audio."""
     palabra = st.session_state.palabra_actual
